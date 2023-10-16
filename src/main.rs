@@ -1,3 +1,9 @@
+mod editor;
+mod terminal;
+
+use editor::Editor;
+
 fn main() {
-    println!("Hello, world!");
+    let mut editor = Editor::default();
+    editor.run();
 }
