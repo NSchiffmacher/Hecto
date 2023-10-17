@@ -1,9 +1,13 @@
 mod editor;
 mod terminal;
+mod document;
 
-use editor::Editor;
+pub use document::Document;
 
+pub use editor::Editor;
 pub use editor::Position;
+
+pub use terminal::Terminal;
 
 fn main() {
     let mut editor = Editor::default();
