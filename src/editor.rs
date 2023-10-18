@@ -1,11 +1,14 @@
 
 use termion::event::Key;
+use termion::color;
 
 use crate::Terminal;
 use crate::Document;
 use crate::Row;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
+const STATUS_BG_COLOR: color::Rgb = color::Rgb(239, 239, 239);
+const STATUS_FG_COLOR: color::Rgb = color::Rgb(63, 63, 63);
 
 #[derive(Default)]
 pub struct Position {
@@ -58,6 +61,8 @@ impl Editor {
         Terminal::cursor_position(&Position::default());
         
         self.draw_rows();
+        self.draw_status_bar();
+        self.draw_message_bar();
         
         Terminal::cursor_position(&Position {
             x: self.cursor_position.x.saturating_sub(self.offset.x),
@@ -71,7 +76,7 @@ impl Editor {
 
     fn draw_rows(&self) {
         let height = self.terminal.size().height;
-        for terminal_row in 0..height - 1 {
+        for terminal_row in 0..height {
             Terminal::clear_current_line();
             if let Some(row) = self.document.row(terminal_row as usize + self.offset.y) {
                 self.draw_row(row);
@@ -105,6 +110,31 @@ impl Editor {
         welcome_message.truncate(width);
 
         println!("{welcome_message}\r");
+    }
+
+    fn draw_status_bar(&self) {
+        let filename = if let Some(filename) = &self.document.filename {
+            let mut filename = filename.clone();
+            filename.truncate(20);
+            filename
+        } else {
+            "[No name]".to_string()
+        };
+
+        let len = self.document.len();
+        let status = format!(" {filename} - {len} lines");
+        let line_indicator = format!("{}/{} ", self.cursor_position.y.saturating_add(1), len);
+        let spaces = " ".repeat(self.terminal.size().width as usize - status.len() - line_indicator.len());
+
+        Terminal::set_bg_color(STATUS_BG_COLOR);
+        Terminal::set_fg_color(STATUS_FG_COLOR);
+        println!("{status}{spaces}{line_indicator}\r");
+        Terminal::reset_bg_color();
+        Terminal::reset_fg_color();
+    }
+
+    fn draw_message_bar(&self) {
+        Terminal::clear_current_line();
     }
 
     fn process_keypress(&mut self) -> Result<(), std::io::Error> {

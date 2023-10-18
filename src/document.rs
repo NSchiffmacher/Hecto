@@ -4,6 +4,7 @@ use std::fs;
 
 #[derive(Default)]
 pub struct Document {
+    pub filename: Option<String>,
     rows: Vec<Row>,
 }
 
@@ -14,7 +15,10 @@ impl Document {
         for row_content in content.lines() {
             rows.push(Row::from(row_content));
         }
-        Ok(Self { rows })
+        Ok(Self { 
+            filename: Some(filename.to_string()),
+            rows,
+         })
     }
 
     pub fn row(&self, index: usize) -> Option<&Row> {
