@@ -3,9 +3,11 @@ use termion::event::Key;
 
 use crate::Terminal;
 use crate::Document;
+use crate::Row;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
+#[derive(Default)]
 pub struct Position {
     pub x: usize,
     pub y: usize
@@ -34,7 +36,7 @@ impl Editor {
 
     fn refresh_screen(&self) -> Result<(), std::io::Error>  {
         Terminal::hide_cursor();
-        Terminal::cursor_position(&Position{ x:0, y: 0 });
+        Terminal::cursor_position(&Position::default());
         
         self.draw_rows();
         
@@ -47,9 +49,11 @@ impl Editor {
 
     fn draw_rows(&self) {
         let height = self.terminal.size().height;
-        for line_number in 0..(height-1) {
+        for terminal_row in 0..height - 1 {
             Terminal::clear_current_line();
-            if line_number == height / 3 {
+            if let Some(row) = self.document.row(terminal_row as usize) {
+                self.draw_row(row);
+            } else if terminal_row == height / 3 && self.document.is_empty() {
                 self.draw_welcome_message();
             } else {
                 println!("~\r");
@@ -68,7 +72,14 @@ impl Editor {
         welcome_message = format!("~{spaces}{welcome_message}");
         welcome_message.truncate(width);
 
-        println!("{}\r", welcome_message);
+        println!("{welcome_message}\r");
+    }
+
+    pub fn draw_row(&self, row: &Row) {
+        let start = 0;
+        let end = self.terminal.size().width as usize;
+        let row = row.render(start, end);
+        println!("{row}\r");
     }
 
     fn process_keypress(&mut self) -> Result<(), std::io::Error> {
@@ -118,18 +129,26 @@ impl Editor {
 
     fn exit(&self) {
         Terminal::clear_screen();
-        Terminal::cursor_position(&Position { x: 0, y: 0 });
+        Terminal::cursor_position(&Position::default());
         print!("Salut!");
         Terminal::flush().unwrap();
     }
 
 
     pub fn default() -> Self {
+        let args: Vec<_> = std::env::args().collect();
+        let document = if args.len() > 1 {
+            let filename = &args[1];
+            Document::open(&filename).unwrap_or_default()
+        } else {
+            Document::default()
+        };
+
         Self { 
             should_quit: false,
             terminal: Terminal::default().expect("Failed to create the terminal"),
-            document: Document::default(),
-            cursor_position: Position { x: 0, y: 0 },
+            document,
+            cursor_position: Position::default(),
         }
     }
 }
