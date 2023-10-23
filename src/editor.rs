@@ -175,8 +175,14 @@ impl Editor {
         match pressed_key {
             Key::Ctrl('q') => self.should_quit = true,
             Key::Up | Key::Down | Key::Left | Key::Right 
-              | Key::PageUp | Key::PageDown | Key::Home | Key::End => self.move_cursor(pressed_key),
+            | Key::PageUp | Key::PageDown | Key::Home | Key::End => self.move_cursor(pressed_key),
+            
+            Key::Char(c) => {
+                self.document.insert(&self.cursor_position, c);
+                self.move_cursor(Key::Right);
+            },
             _ => (),
+
         }
 
         self.scroll();
@@ -241,7 +247,7 @@ impl Editor {
             Key::Right      => {
                 if x < width {
                     x += 1;
-                } else if y < height {
+                } else if y < height.saturating_sub(1) {
                     y += 1;
                     x = 0;
                 }
