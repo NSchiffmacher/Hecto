@@ -13,6 +13,8 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 const STATUS_BG_COLOR: color::Rgb = color::Rgb(239, 239, 239);
 const STATUS_FG_COLOR: color::Rgb = color::Rgb(63, 63, 63);
 
+const STATUS_BAR_LENGTH: usize = 40;
+
 #[derive(Default)]
 pub struct Position {
     pub x: usize,
@@ -65,8 +67,10 @@ impl Editor {
             if let Ok(document) = Document::open(&filename) {
                 document
             } else {
-                initial_status = format!("ERR: Could not open file: {filename}");
-                Document::default()
+                initial_status = format!("ERR: Could not open file {filename}, creating it");
+                let mut document = Document::default();
+                document.filename = Some(filename.clone());
+                document
             }
         } else {
             Document::default()
@@ -141,7 +145,7 @@ impl Editor {
     fn draw_status_bar(&self) {
         let filename = if let Some(filename) = &self.document.filename {
             let mut filename = filename.clone();
-            filename.truncate(20);
+            filename.truncate(STATUS_BAR_LENGTH);
             filename
         } else {
             "[No name]".to_string()
@@ -351,7 +355,7 @@ impl Editor {
     fn exit(&self) {
         Terminal::clear_screen();
         Terminal::cursor_position(&Position::default());
-        print!("Salut!");
+        println!("Salut!\r");
         Terminal::flush().unwrap();
     }
 }
