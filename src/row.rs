@@ -78,6 +78,11 @@ impl Row {
         let graphemes = self.string[..].graphemes(true);
         self.len = graphemes.clone().count() + graphemes.filter(|&grapheme| grapheme == "\t").count() * (2 - 1); // 2-1 because we use a tab size of two for now 
     }
+
+    pub fn as_bytes(&self) -> &[u8] {
+        self.string.as_bytes()
+    }
+
 }
 
 impl From<&str> for Row {

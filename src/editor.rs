@@ -58,7 +58,7 @@ impl Editor {
 
     pub fn default() -> Self {
         let args: Vec<_> = std::env::args().collect();
-        let mut initial_status = "HELP: Ctrl-Q = quit".to_string();
+        let mut initial_status = "HELP: Ctrl-S = save | Ctrl-Q = quit".to_string();
 
         let document = if args.len() > 1 {
             let filename = &args[1];
@@ -174,6 +174,13 @@ impl Editor {
         let pressed_key = Terminal::read_key()?;
         match pressed_key {
             Key::Ctrl('q') => self.should_quit = true,
+            Key::Ctrl('s') => {
+                if self.document.save().is_ok() {
+                    self.status_message = StatusMessage::from("File saved successfully.".to_string());
+                } else {
+                    self.status_message = StatusMessage::from("Error writting file!".to_string());
+                }
+            },
             Key::Up | Key::Down | Key::Left | Key::Right 
             | Key::PageUp | Key::PageDown | Key::Home | Key::End => self.move_cursor(pressed_key),
             

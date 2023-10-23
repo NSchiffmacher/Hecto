@@ -2,6 +2,7 @@ use crate::Row;
 use crate::Position;
 
 use std::fs;
+use std::io::{Error, Write};
 
 #[derive(Default)]
 pub struct Document {
@@ -20,6 +21,18 @@ impl Document {
             filename: Some(filename.to_string()),
             rows,
          })
+    }
+
+    pub fn save(&self) -> Result<(), Error> {
+        if let Some(filename) = &self.filename {
+            let mut file = fs::File::create(filename)?;
+            for row in &self.rows {
+                file.write_all(row.as_bytes())?;
+                file.write_all(b"\n")?;
+            }
+        }
+
+        Ok(())
     }
 
     pub fn insert(&mut self, at: &Position, c: char) {
