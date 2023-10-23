@@ -147,8 +147,15 @@ impl Editor {
             "[No name]".to_string()
         };
 
+        let modified_indicator = if self.document.is_dirty() {
+            " (modified)"
+        } else {
+            ""
+        };
+
+
         let len = self.document.len();
-        let status = format!("{filename} - {len} lines");
+        let status = format!("{filename} - {len} lines{modified_indicator}");
         let line_indicator = format!("{}/{}", self.cursor_position.y.saturating_add(1), len);
         let spaces = " ".repeat(self.terminal.size().width as usize - status.len() - line_indicator.len());
 

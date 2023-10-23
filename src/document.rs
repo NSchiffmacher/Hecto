@@ -2,12 +2,13 @@ use crate::Row;
 use crate::Position;
 
 use std::fs;
-use std::io::{Error, ErrorKind, Write};
+use std::io::{Error, Write};
 
 #[derive(Default)]
 pub struct Document {
     pub filename: Option<String>,
     rows: Vec<Row>,
+    dirty: bool,
 }
 
 impl Document {
@@ -20,24 +21,29 @@ impl Document {
         Ok(Self { 
             filename: Some(filename.to_string()),
             rows,
+            dirty: false,
          })
     }
 
-    pub fn save(&self) -> Result<(), Error> {
+    pub fn save(&mut self) -> Result<(), Error> {
         if let Some(filename) = &self.filename {
             let mut file = fs::File::create(filename)?;
             for row in &self.rows {
                 file.write_all(row.as_bytes())?;
                 file.write_all(b"\n")?;
             }
-
-            Ok(())
-        } else {
-            Err(Error::new(ErrorKind::Other, "Filename not set"))
+            self.dirty = false;
         }
+        Ok(())
     }
 
     pub fn insert(&mut self, at: &Position, c: char) {
+        if at.y > self.len() {
+            return;
+        } 
+        
+        self.dirty = true;
+
         if c == '\n' {
             self.insert_newline(at);
             return;
@@ -53,10 +59,6 @@ impl Document {
     }
 
     pub fn insert_newline(&mut self, at: &Position) {
-        if at.y > self.len() {
-            return;
-        }
-
         if at.y == self.len() {
             self.rows.push(Row::default());
             return;
@@ -72,6 +74,7 @@ impl Document {
             return;
         }
 
+        self.dirty = true;
         if at.x == self.rows[at.y].len() && at.y < len - 1 {
             let next_row = self.rows.remove(at.y + 1);
             let row = &mut self.rows[at.y];
@@ -87,6 +90,10 @@ impl Document {
 
     pub fn is_empty(&self) -> bool {
         self.rows.is_empty()
+    }
+
+    pub fn is_dirty(&self) -> bool {
+        self.dirty
     }
 
     pub fn len(&self) -> usize {
