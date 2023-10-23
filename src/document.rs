@@ -2,7 +2,7 @@ use crate::Row;
 use crate::Position;
 
 use std::fs;
-use std::io::{Error, Write};
+use std::io::{Error, ErrorKind, Write};
 
 #[derive(Default)]
 pub struct Document {
@@ -30,9 +30,11 @@ impl Document {
                 file.write_all(row.as_bytes())?;
                 file.write_all(b"\n")?;
             }
-        }
 
-        Ok(())
+            Ok(())
+        } else {
+            Err(Error::new(ErrorKind::Other, "Filename not set"))
+        }
     }
 
     pub fn insert(&mut self, at: &Position, c: char) {

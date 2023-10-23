@@ -174,13 +174,7 @@ impl Editor {
         let pressed_key = Terminal::read_key()?;
         match pressed_key {
             Key::Ctrl('q') => self.should_quit = true,
-            Key::Ctrl('s') => {
-                if self.document.save().is_ok() {
-                    self.status_message = StatusMessage::from("File saved successfully.".to_string());
-                } else {
-                    self.status_message = StatusMessage::from("Error writting file!".to_string());
-                }
-            },
+            Key::Ctrl('s') => self.save(),
             Key::Up | Key::Down | Key::Left | Key::Right 
             | Key::PageUp | Key::PageDown | Key::Home | Key::End => self.move_cursor(pressed_key),
             
@@ -283,6 +277,63 @@ impl Editor {
         }
 
         self.cursor_position = Position { x, y };
+    }
+
+    fn prompt(&mut self, prompt: &str) -> Result<Option<String>, std::io::Error> {
+        let mut result = String::new();
+
+        loop {
+            self.status_message = StatusMessage::from(format!("{}{}", prompt, result));
+            self.refresh_screen()?;
+
+            match Terminal::read_key()? {
+                Key::Char('\n') => break,
+                Key::Char(c) => {
+                    if !c.is_control() {
+                        result.push(c);
+                    }
+                },
+                Key::Backspace => {
+                    if !result.is_empty() {
+                        result.truncate(result.len() - 1);
+                    }
+                },
+                Key::Ctrl('c') | Key::Esc => {
+                    result.truncate(0);
+                    break;
+                },
+                Key::Ctrl('q') => {
+                    self.should_quit = true;
+                    result.truncate(0);
+                    break;
+                },
+                _ => (),
+            }
+        };
+
+        self.status_message = StatusMessage::from(String::new());
+        if result.is_empty() {
+            return Ok(None);
+        }
+        Ok(Some(result))
+    }
+
+    fn save(&mut self) {
+        if self.document.filename.is_none() {
+            let new_name = self.prompt("Save as: ").unwrap_or(None);
+            if new_name.is_none() {
+                self.status_message = StatusMessage::from("Save aborted.".to_string());
+                return;
+            }
+
+            self.document.filename = new_name;
+        }
+
+        if self.document.save().is_ok() {
+            self.status_message = StatusMessage::from("File saved successfully.".to_string());
+        } else {
+            self.status_message = StatusMessage::from("Error writting file!".to_string());
+        }
     }
 
     fn exit_on_error(&self, error: std::io::Error) {
