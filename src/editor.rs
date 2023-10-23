@@ -12,13 +12,14 @@ use crate::Row;
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 const STATUS_BG_COLOR: color::Rgb = color::Rgb(239, 239, 239);
 const STATUS_FG_COLOR: color::Rgb = color::Rgb(63, 63, 63);
+const QUIT_TIMES: u8 = 3;
 
 const STATUS_BAR_LENGTH: usize = 40;
 
 #[derive(Default)]
 pub struct Position {
     pub x: usize,
-    pub y: usize
+    pub y: usize,
 }
 
 struct StatusMessage {
@@ -37,6 +38,7 @@ impl From<String> for StatusMessage {
 
 pub struct Editor {
     should_quit: bool,
+    quit_times: u8,
     terminal: Terminal,
     cursor_position: Position,
     offset: Position,
@@ -60,11 +62,10 @@ impl Editor {
 
     pub fn default() -> Self {
         let args: Vec<_> = std::env::args().collect();
-        let mut initial_status = "HELP: Ctrl-S = save | Ctrl-Q = quit".to_string();
+        let mut initial_status = "HELP: Ctrl-S = save | Ctrl-Q = quit".to_owned();
 
-        let document = if args.len() > 1 {
-            let filename = &args[1];
-            if let Ok(document) = Document::open(&filename) {
+        let document = if let Some(filename) = args.get(1) {
+            if let Ok(document) = Document::open(filename) {
                 document
             } else {
                 initial_status = format!("ERR: Could not open file {filename}, creating it");
@@ -78,6 +79,7 @@ impl Editor {
 
         Self { 
             should_quit: false,
+            quit_times: QUIT_TIMES,
             terminal: Terminal::default().expect("Failed to create the terminal"),
             document,
             offset: Position::default(),
@@ -108,7 +110,7 @@ impl Editor {
         let height = self.terminal.size().height;
         for terminal_row in 0..height {
             Terminal::clear_current_line();
-            if let Some(row) = self.document.row(terminal_row as usize + self.offset.y) {
+            if let Some(row) = self.document.row((terminal_row as usize).saturating_add(self.offset.y)) {
                 self.draw_row(row);
             } else if terminal_row == height / 3 && self.document.is_empty() {
                 self.draw_welcome_message();
@@ -122,7 +124,7 @@ impl Editor {
         let width = self.terminal.size().width as usize;
 
         let start = self.offset.x;
-        let end = self.offset.x + width;
+        let end = self.offset.x.saturating_add(width);
 
         let row = row.render(start, end);
         println!("{row}\r");
@@ -148,7 +150,7 @@ impl Editor {
             filename.truncate(STATUS_BAR_LENGTH);
             filename
         } else {
-            "[No name]".to_string()
+            "[No name]".to_owned()
         };
 
         let modified_indicator = if self.document.is_dirty() {
@@ -184,7 +186,17 @@ impl Editor {
     fn process_keypress(&mut self) -> Result<(), std::io::Error> {
         let pressed_key = Terminal::read_key()?;
         match pressed_key {
-            Key::Ctrl('q') => self.should_quit = true,
+            Key::Ctrl('q') => {
+                if self.quit_times > 0 && self.document.is_dirty() {
+                    self.status_message = StatusMessage::from(format!(
+                        "WARNING! File has unsaved changes. Press Ctrl-Q {} more times to exit without saving",
+                        self.quit_times
+                    ));
+                    self.quit_times -= 1;
+                    return Ok(());
+                }
+                self.should_quit = true;
+            },
             Key::Ctrl('s') => self.save(),
             Key::Up | Key::Down | Key::Left | Key::Right 
             | Key::PageUp | Key::PageDown | Key::Home | Key::End => self.move_cursor(pressed_key),
@@ -205,6 +217,11 @@ impl Editor {
         }
 
         self.scroll();
+        if self.quit_times < QUIT_TIMES {
+            self.quit_times = QUIT_TIMES;
+            self.status_message = StatusMessage::from(String::new());
+        }
+
         Ok(())
     }
 

@@ -18,7 +18,7 @@ impl Row {
             .skip(start)
             .take(end-start) {
                 if grapheme == "\t" {
-                    result.push_str("  ");
+                    result.push_str(" ");
                 } else {
                     result.push_str(grapheme);
                 }
@@ -29,41 +29,73 @@ impl Row {
     pub fn insert(&mut self, at: usize, c: char) {
         if at >= self.len() {
             self.string.push(c);
-        } else {
-            let mut result: String = self.string.graphemes(true).take(at).collect();
-            let reminder: String = self.string.graphemes(true).skip(at).collect();
-            result.push(c);
-            result.push_str(&reminder);
-            self.string = result;
+            self.len += 1;
+            return;
+        } 
+        
+        let mut result = String::new();
+        let mut length = 0;
+        for (index, grapheme) in self.string.graphemes(true).enumerate() {
+            length += 1;
+            if index == at {
+                length += 1;
+                result.push(c);
+            }
+            result.push_str(grapheme);
         }
-        self.update_len();
+
+        self.len = length;
+        self.string = result;
     }
 
     pub fn delete(&mut self, at: usize) {
         if at >= self.len() {
             return;
-        } else {
-            let mut result: String = self.string.graphemes(true).take(at).collect();
-            let reminder: String = self.string.graphemes(true).skip(at+1).collect();
-            result.push_str(&reminder);
-            self.string = result;
+        } 
+
+        let mut result = String::new();
+        let mut length = 0;
+
+        for (index, grapheme) in self.string.graphemes(true).enumerate() {
+            if index != at {
+                length += 1;
+                result.push_str(grapheme);
+            } 
         }
-        self.update_len();
+        
+        self.len = length;
+        self.string = result;
     }
 
     pub fn append(&mut self, new: &Self) {
         self.string = format!("{}{}", self.string, new.string);
-        self.update_len();
+        self.len += new.len;
     }
 
     pub fn split(&mut self, at: usize) -> Self {
-        let beginning: String = self.string.graphemes(true).take(at).collect();
-        let end: String = self.string.graphemes(true).skip(at).collect();
+        let mut row = String::new();
+        let mut length = 0;
 
-        self.string = beginning;
-        self.update_len();
+        let mut splitted_row = String::new();
+        let mut splitted_length = 0;
 
-        Self::from(&end[..])
+        for (index, grapheme) in self.string.graphemes(true).enumerate() {
+            if index < at {
+                row.push_str(grapheme);
+                length += 1;
+            } else {
+                splitted_row.push_str(grapheme);
+                splitted_length += 1;
+            }
+        }
+        
+        self.string = row;
+        self.len = length;
+
+        Self {
+            string: splitted_row,
+            len: splitted_length,
+        }
     }
 
     pub fn len(&self) -> usize {
@@ -74,11 +106,6 @@ impl Row {
         self.len == 0
     }
 
-    fn update_len(&mut self) {
-        let graphemes = self.string[..].graphemes(true);
-        self.len = graphemes.clone().count() + graphemes.filter(|&grapheme| grapheme == "\t").count() * (2 - 1); // 2-1 because we use a tab size of two for now 
-    }
-
     pub fn as_bytes(&self) -> &[u8] {
         self.string.as_bytes()
     }
@@ -87,11 +114,9 @@ impl Row {
 
 impl From<&str> for Row {
     fn from(slice: &str) -> Self {
-        let mut result = Self { 
-            string: String::from(slice), 
-            len: 0,
-        };
-        result.update_len();
-        result
+        Self {
+            string: String::from(slice),
+            len: slice.graphemes(true).count(),
+        }
     }
 }
