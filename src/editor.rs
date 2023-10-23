@@ -177,6 +177,13 @@ impl Editor {
             Key::Up | Key::Down | Key::Left | Key::Right 
             | Key::PageUp | Key::PageDown | Key::Home | Key::End => self.move_cursor(pressed_key),
             
+            Key::Delete => self.document.delete(&self.cursor_position),
+            Key::Backspace => {
+                if self.cursor_position.x > 0 || self.cursor_position.y > 0{
+                    self.move_cursor(Key::Left);
+                    self.document.delete(&self.cursor_position);
+                }
+            }
             Key::Char(c) => {
                 self.document.insert(&self.cursor_position, c);
                 self.move_cursor(Key::Right);
@@ -253,7 +260,7 @@ impl Editor {
                 }
             },
             Key::PageUp     => y = y.saturating_sub(self.terminal.size().height as usize),
-            Key::PageDown   => y = std::cmp::min(y.saturating_add(self.terminal.size().height as usize), height),
+            Key::PageDown   => y = std::cmp::min(y.saturating_add(self.terminal.size().height as usize), height.saturating_sub(1)),
             Key::Home       => x = 0,
             Key::End        => x = width,
             _ => {},
