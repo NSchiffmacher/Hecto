@@ -17,7 +17,9 @@ impl Document {
         let content = fs::read_to_string(filename)?;
         let mut rows = Vec::new();
         for row_content in content.lines() {
-            rows.push(Row::from(row_content));
+            let mut row = Row::from(row_content);
+            row.highlight(None);
+            rows.push(row);
         }
         Ok(Self { 
             filename: Some(filename.to_string()),
@@ -38,6 +40,12 @@ impl Document {
         Ok(())
     }
 
+    pub fn highlight(&mut self, word: Option<&str>) {
+        for row in &mut self.rows {
+            row.highlight(word);
+        }
+    }
+
     pub fn insert(&mut self, at: &Position, c: char) {
         if at.y > self.len() {
             return;
@@ -53,9 +61,12 @@ impl Document {
         if at.y == self.len() {
             let mut row = Row::default();
             row.insert(0, c);
+            row.highlight(None);
             self.rows.push(row);
         } else {
-            self.rows[at.y].insert(at.x, c);
+            let row = &mut self.rows[at.y];
+            row.insert(at.x, c);
+            row.highlight(None);
         }
     }
 
@@ -65,7 +76,12 @@ impl Document {
             return;
         }
 
-        let new_row = self.rows[at.y].split(at.x);
+        let current_row = &mut self.rows[at.y];
+        let mut new_row = current_row.split(at.x);
+
+        current_row.highlight(None);
+        new_row.highlight(None);
+
         self.rows.insert(at.y + 1, new_row);
     }
 
@@ -79,9 +95,12 @@ impl Document {
         if at.x == self.rows[at.y].len() && at.y < len - 1 {
             let next_row = self.rows.remove(at.y + 1);
             let row = &mut self.rows[at.y];
+            row.highlight(None);
             row.append(&next_row);
         } else {
-            self.rows[at.y].delete(at.x);
+            let row = &mut self.rows[at.y];
+            row.delete(at.x);
+            row.highlight(None);
         }
     }
 
