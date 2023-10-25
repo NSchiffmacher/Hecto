@@ -160,11 +160,12 @@ impl Row {
     }
 
     pub fn highlight(&mut self, word: Option<&str>) {
-        let mut highlighting = Vec::new();
+        let mut highlightings = Vec::new();
         let chars: Vec<_> = self.string.chars().collect();
         let mut matches = Vec::new();
         let mut search_index = 0;
 
+        // Search matches finding
         if let Some(word) = word {
             while let Some(search_match) = self.find(word, search_index, SearchDirection::Forward) {
                 matches.push(search_match);
@@ -177,26 +178,33 @@ impl Row {
         }
 
         let mut index = 0;
+        let mut prev_seperator = true;
+        let mut prev_highlighting;
         while let Some(c) = chars.get(index) {
+            prev_highlighting = highlightings.get(index.saturating_sub(1)).unwrap_or(&highlighting::Type::None);
+
+            // Search results highlighting
             if let Some(word) = word {
                 if matches.contains(&index) {
                     for _ in word[..].graphemes(true) {
                         index += 1;
-                        highlighting.push(highlighting::Type::SearchMatch);
+                        highlightings.push(highlighting::Type::SearchMatch);
                     }
                     continue;
                 }
             }
 
-            if c.is_ascii_digit() {
-                highlighting.push(highlighting::Type::Number);
+            // Numbers highlighting
+            if (c.is_ascii_digit() && (prev_seperator || (prev_highlighting == &highlighting::Type::Number))) || (prev_highlighting == &highlighting::Type::Number && (c == &'.' || c == &'_')) {
+                highlightings.push(highlighting::Type::Number);
             } else {
-                highlighting.push(highlighting::Type::None);
+                highlightings.push(highlighting::Type::None);
             }
+            prev_seperator = c.is_ascii_whitespace() || c.is_ascii_punctuation();
             index += 1;
         }
 
-        self.highlighting = highlighting;
+        self.highlighting = highlightings;
     }
 
     pub fn len(&self) -> usize {
