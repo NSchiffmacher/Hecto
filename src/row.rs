@@ -2,6 +2,7 @@ use std::cmp;
 use unicode_segmentation::UnicodeSegmentation;
 use termion::color;
 
+use crate::HighlightingOptions;
 use crate::SearchDirection;
 use crate::highlighting;
 
@@ -159,7 +160,7 @@ impl Row {
         None
     }
 
-    pub fn highlight(&mut self, word: Option<&str>) {
+    pub fn highlight(&mut self, opts: &HighlightingOptions, word: Option<&str>) {
         let mut highlightings = Vec::new();
         let chars: Vec<_> = self.string.chars().collect();
         let mut matches = Vec::new();
@@ -178,6 +179,7 @@ impl Row {
         }
 
         let mut index = 0;
+        let mut in_string = false;
         let mut prev_seperator = true;
         let mut prev_highlighting;
         while let Some(c) = chars.get(index) {
@@ -194,8 +196,23 @@ impl Row {
                 }
             }
 
+            // Strings highlighting
+            if opts.strings() {
+                if in_string || *c == '"' {
+                    highlightings.push(highlighting::Type::String);
+                    if *c == '"' {
+                        in_string = !in_string;
+                        prev_seperator = true;
+                    } else {
+                        prev_seperator = false;
+                    }
+                    index += 1;
+                    continue;
+                }
+            }
+
             // Numbers highlighting
-            if (c.is_ascii_digit() && (prev_seperator || (prev_highlighting == &highlighting::Type::Number))) || (prev_highlighting == &highlighting::Type::Number && (c == &'.' || c == &'_')) {
+            if opts.numbers() && (c.is_ascii_digit() && (prev_seperator || (prev_highlighting == &highlighting::Type::Number))) || (prev_highlighting == &highlighting::Type::Number && (c == &'.' || c == &'_')) {
                 highlightings.push(highlighting::Type::Number);
             } else {
                 highlightings.push(highlighting::Type::None);

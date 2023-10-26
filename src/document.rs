@@ -1,6 +1,7 @@
 use crate::Row;
 use crate::Position;
 use crate::SearchDirection;
+use crate::FileType;
 
 use std::fs;
 use std::io::{Error, Write};
@@ -10,21 +11,24 @@ pub struct Document {
     pub filename: Option<String>,
     rows: Vec<Row>,
     dirty: bool,
+    file_type: FileType,
 }
 
 impl Document {
     pub fn open(filename: &str) -> Result<Self, std::io::Error> {
         let content = fs::read_to_string(filename)?;
         let mut rows = Vec::new();
+        let file_type = FileType::from(filename);
         for row_content in content.lines() {
             let mut row = Row::from(row_content);
-            row.highlight(None);
+            row.highlight(file_type.highlighting_options(), None);
             rows.push(row);
         }
         Ok(Self { 
             filename: Some(filename.to_string()),
             rows,
             dirty: false,
+            file_type: file_type,
          })
     }
 
@@ -42,7 +46,7 @@ impl Document {
 
     pub fn highlight(&mut self, word: Option<&str>) {
         for row in &mut self.rows {
-            row.highlight(word);
+            row.highlight(self.file_type.highlighting_options(), word);
         }
     }
 
@@ -61,12 +65,12 @@ impl Document {
         if at.y == self.len() {
             let mut row = Row::default();
             row.insert(0, c);
-            row.highlight(None);
+            row.highlight(self.file_type.highlighting_options(), None);
             self.rows.push(row);
         } else {
             let row = &mut self.rows[at.y];
             row.insert(at.x, c);
-            row.highlight(None);
+            row.highlight(self.file_type.highlighting_options(), None);
         }
     }
 
@@ -79,8 +83,8 @@ impl Document {
         let current_row = &mut self.rows[at.y];
         let mut new_row = current_row.split(at.x);
 
-        current_row.highlight(None);
-        new_row.highlight(None);
+        current_row.highlight(self.file_type.highlighting_options(), None);
+        new_row.highlight(self.file_type.highlighting_options(), None);
 
         self.rows.insert(at.y + 1, new_row);
     }
@@ -95,12 +99,12 @@ impl Document {
         if at.x == self.rows[at.y].len() && at.y < len - 1 {
             let next_row = self.rows.remove(at.y + 1);
             let row = &mut self.rows[at.y];
-            row.highlight(None);
+            row.highlight(self.file_type.highlighting_options(), None);
             row.append(&next_row);
         } else {
             let row = &mut self.rows[at.y];
             row.delete(at.x);
-            row.highlight(None);
+            row.highlight(self.file_type.highlighting_options(), None);
         }
     }
 
@@ -153,6 +157,10 @@ impl Document {
             }
         }
         None
+    }
+
+    pub fn file_type(&self) -> String {
+        self.file_type.name()
     }
 
     pub fn len(&self) -> usize {
