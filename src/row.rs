@@ -232,6 +232,19 @@ impl Row {
                 }
             }
 
+            // Single line comment highlighting
+            if *c == '/' {
+                if let Some(comment_char) = chars.get(index.saturating_add(1)) {
+                    if *comment_char == '/' {
+                        // Rest of the line is a char
+                        for _ in index..chars.len() {
+                            highlightings.push(highlighting::Type::Comment);
+                        }
+                        break;
+                    }
+                }
+            }
+
             // Numbers highlighting
             if opts.numbers() && (c.is_ascii_digit() && (prev_seperator || (prev_highlighting == &highlighting::Type::Number))) || (prev_highlighting == &highlighting::Type::Number && (c == &'.' || c == &'_')) {
                 highlightings.push(highlighting::Type::Number);

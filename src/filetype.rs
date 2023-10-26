@@ -10,6 +10,7 @@ pub struct HighlightingOptions {
     numbers: bool,
     strings: bool,
     characters: bool,
+    comments: bool,
 }
 
 impl HighlightingOptions {
@@ -23,6 +24,10 @@ impl HighlightingOptions {
 
     pub fn characters(&self) -> bool {
         self.characters
+    }
+
+    pub fn comments(&self) -> bool {
+        self.comments
     }
 }
 
@@ -45,6 +50,7 @@ impl From<&str> for FileType {
                     numbers: true,
                     strings: true,
                     characters: true,
+                    comments: true,
                 }
             }
         } else {
