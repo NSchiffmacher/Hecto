@@ -182,7 +182,7 @@ impl Row {
         let mut in_string = false;
         let mut prev_seperator = true;
         let mut prev_highlighting;
-        while let Some(c) = chars.get(index) {
+        'main_loop: while let Some(c) = chars.get(index) {
             prev_highlighting = highlightings.get(index.saturating_sub(1)).unwrap_or(&highlighting::Type::None);
 
             // Search results highlighting
@@ -241,6 +241,87 @@ impl Row {
                             highlightings.push(highlighting::Type::Comment);
                         }
                         break;
+                    }
+                }
+            }
+
+            // Primary keywords 
+            let first_char = index == 0;
+            if first_char || c.is_whitespace() || (c.is_ascii_punctuation() && *c != '_'){
+                let mut primary_keyword_found;
+                if !first_char {
+                    index += 1;
+                } 
+                for word in opts.primary_keywords() {
+                    primary_keyword_found = true;
+                    for (keyword_index, keyword_char) in word.chars().enumerate() {
+                        if let Some(c) = chars.get(index.saturating_add(keyword_index)) {
+                            if *c != keyword_char {
+                                primary_keyword_found = false;
+                                break;
+                            }
+                        } else {
+                            primary_keyword_found = false;
+                            break;
+                        }
+                    }
+                    if let Some(c) = chars.get(index.saturating_add(word.len())) {
+                        if c.is_ascii_alphanumeric(){
+                            primary_keyword_found = false;
+                        }
+                    }
+                    if primary_keyword_found {
+                        if !first_char {
+                            highlightings.push(highlighting::Type::None);
+                        }
+                        for _ in 0..word.len() {
+                            highlightings.push(highlighting::Type::PrimaryKeyword);
+                            index += 1;
+                        }
+                        continue 'main_loop;
+                    }
+                }
+                if !first_char {
+                    index -= 1;
+                }
+            }
+
+            // Secondary keywords 
+            if first_char || c.is_whitespace() || (c.is_ascii_punctuation() && *c != '_'){
+                let mut secondary_keyword_found;
+                for word in opts.secondary_keywords() {
+                    secondary_keyword_found = true;
+                    if !first_char {
+                        index += 1;
+                    } 
+                    for (keyword_index, keyword_char) in word.chars().enumerate() {
+                        if let Some(c) = chars.get(index.saturating_add(keyword_index)) {
+                            if *c != keyword_char {
+                                secondary_keyword_found = false;
+                                break;
+                            }
+                        } else {
+                            secondary_keyword_found = false;
+                            break;
+                        }
+                    }
+                    if let Some(c) = chars.get(index.saturating_add(word.len())) {
+                        if c.is_ascii(){
+                            secondary_keyword_found = false;
+                        }
+                    }
+                    if secondary_keyword_found {
+                        if !first_char {
+                            highlightings.push(highlighting::Type::None);
+                        }
+                        for _ in 0..word.len() {
+                            highlightings.push(highlighting::Type::SecondaryKeyword);
+                            index += 1;
+                        }
+                        continue 'main_loop;
+                    }
+                    if !first_char {
+                        index -= 1;
                     }
                 }
             }
