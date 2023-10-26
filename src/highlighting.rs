@@ -5,6 +5,7 @@ pub enum Type {
     Number,
     SearchMatch,
     String,
+    Character,
     None,
 }
 
@@ -14,6 +15,7 @@ impl Type {
             Type::Number => color::Rgb(220, 163, 163),
             Type::SearchMatch => color::Rgb(38, 139, 210),
             Type::String => color::Rgb(211, 54, 130),
+            Type::Character => color::Rgb(108, 113, 196),
             Type::None => color::Rgb(255, 255, 255),
         }
     }

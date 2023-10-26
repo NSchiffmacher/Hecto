@@ -211,6 +211,27 @@ impl Row {
                 }
             }
 
+            // Chars highlighting
+            if opts.characters() && !in_string && *c == '\'' {
+                prev_seperator = true;
+                if let Some(next_char) = chars.get(index.saturating_add(1)) {
+                    let closing_index = if *next_char == '\\' {
+                        index.saturating_add(3)
+                    } else {
+                        index.saturating_add(2)
+                    };
+                    if let Some(closing_char) = chars.get(closing_index) {
+                        if *closing_char == '\'' {
+                            for _ in index..closing_index.saturating_add(1) {
+                                highlightings.push(highlighting::Type::Character);
+                            }
+                            index = closing_index.saturating_add(1);
+                            continue;
+                        }
+                    }
+                }
+            }
+
             // Numbers highlighting
             if opts.numbers() && (c.is_ascii_digit() && (prev_seperator || (prev_highlighting == &highlighting::Type::Number))) || (prev_highlighting == &highlighting::Type::Number && (c == &'.' || c == &'_')) {
                 highlightings.push(highlighting::Type::Number);
