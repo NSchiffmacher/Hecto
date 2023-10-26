@@ -203,7 +203,8 @@ impl Editor {
                 }
                 self.should_quit = true;
             },
-            Key::Ctrl('s') => self.save(),
+            Key::Alt('s') => self.save(true),
+            Key::Ctrl('s') => self.save(false),
             Key::Ctrl('f') => self.search(),
             Key::Up | Key::Down | Key::Left | Key::Right 
             | Key::PageUp | Key::PageDown | Key::Home | Key::End => self.move_cursor(pressed_key),
@@ -314,11 +315,11 @@ impl Editor {
         self.cursor_position = Position { x, y };
     }
 
-    fn prompt<C>(&mut self, prompt: &str, mut callback: C) -> Result<Option<String>, std::io::Error> 
+    fn prompt<C>(&mut self, prompt: &str, default_value: &str, mut callback: C) -> Result<Option<String>, std::io::Error> 
     where 
         C: FnMut(&mut Self, Key, &String),
     {
-        let mut result = String::new();
+        let mut result = default_value.to_owned();
 
         loop {
             self.status_message = StatusMessage::from(format!("{}{}", prompt, result));
@@ -358,9 +359,14 @@ impl Editor {
         Ok(Some(result))
     }
 
-    fn save(&mut self) {
-        if self.document.filename.is_none() {
-            let new_name = self.prompt("Save as: ", |_, _, _| {}).unwrap_or(None);
+    fn save(&mut self, ask_filename: bool) {
+        if self.document.filename.is_none() || ask_filename {
+            let default_value = self.document.filename.as_ref().unwrap_or(&String::new()).clone();
+            let new_name = self.prompt(
+                "Save as: ",
+                &default_value[..],
+                |_, _, _| {}
+            ).unwrap_or(None);
             if new_name.is_none() {
                 self.status_message = StatusMessage::from("Save aborted.".to_string());
                 return;
@@ -382,6 +388,7 @@ impl Editor {
         let query = self
             .prompt(
                 "Search (ESC to cancel, Arrows to navigate): ",
+                "",
                 |editor, key, query: &String| {
                     let mut moved = false;
                     match key {
